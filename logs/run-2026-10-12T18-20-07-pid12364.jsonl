@@ -1,0 +1,3 @@
+{"ts":"2026-10-12T18:20:17.994Z","type":"completion","title":"1+1等于几？","options":[],"rawOptions":"—","model":"buddy/hy3","raw":"2","answer":"2","fallback":false,"cached":false}
+{"ts":"2026-10-12T18:20:20.941Z","type":"multiple","title":"以下哪些是水果？","options":["苹果","萝卜","香蕉","土豆"],"rawOptions":"A. 苹果\nB. 萝卜\nC. 香蕉\nD. 土豆","model":"buddy/hy3","raw":"A#C","answer":"A#C","fallback":false,"cached":false}
+{"ts":"2026-10-12T18:21:01.803Z","type":"single","title":"‏马克思第一部专门研究资本主义私有制的政治经济学批判著作是","options":["《1844年经济学哲学手稿》","《国民经济学批判大纲》","《<黑格尔法哲学批判>导言》","《反杜林论》"],"rawOptions":"A. / 《1844年经济学哲学手稿》 / B. / 《国民经济学批判大纲》 / C. / 《<黑格尔法哲学批判>导言》 / D. / 《反杜林论》","model":"buddy/hy3","raw":"A","answer":"A","fallback":false,"cached":false}

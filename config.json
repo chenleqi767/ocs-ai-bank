@@ -1,0 +1,39 @@
+{
+  "host": "127.0.0.1",
+  "port": 8787,
+  "searchUrl": "http://127.0.0.1:8787/search",
+  "token": "6415217a418972fee0181f00e2529e9a",
+  "systemPrompt": "你是网课答题助手，请优先参考常见教材与题库的权威答案。",
+  "provider": {
+    "type": "ofm",
+    "baseUrl": "http://127.0.0.1:18901/v1",
+    "apiKey": "ofm--WIt_n5MDobMcHXwJFh3KCEEVbyGHUbJ",
+    "model": "auto",
+    "modelsFilter": "flash",
+    "temperature": 0,
+    "maxTokens": 512,
+    "dataDir": "C:\\Users\\ASUS\\.our-free-model",
+    "extraHeaders": {}
+  },
+  "cors": {
+    "allowOrigin": "*"
+  },
+  "dsh": {
+    "note": "DSH 桌面端内嵌的 OFM 插件同样是 OpenAI 兼容端点。找到它的 forward 端口与 Key 后，把上方 provider 整段替换为下方示例即可，代码零改动。查找方式见 README。",
+    "provider": {
+      "type": "dsh",
+      "baseUrl": "http://127.0.0.1:DSH_OFM_PORT/v1",
+      "apiKey": "DSH_OFM_KEY",
+      "model": "",
+      "modelsFilter": "flash"
+    }
+  },
+  "cache": {
+    "enabled": true,
+    "ttlMs": 86400000,
+    "maxEntries": 2000
+  },
+  "logging": {
+    "enabled": true
+  }
+}

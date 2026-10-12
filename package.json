@@ -1,0 +1,15 @@
+{
+  "name": "ocs-ai-bank",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "本地 AI 题库：把 OCS 网课助手的 AnswererWrapper 协议接到任意 OpenAI 兼容后端（OFM / DSH 内嵌 OFM / 任意 OpenAI 兼容服务）。纯 Node.js，零第三方依赖，node src/server.js 直接运行。",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

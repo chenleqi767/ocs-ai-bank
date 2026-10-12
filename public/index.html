@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OCS 本地 AI 题库 · 控制台</title>
+  <link rel="stylesheet" href="/vendor/element-plus.css" />
+  <link rel="stylesheet" href="/vendor/element-plus.dark.css" />
+  <style>
+    html, body { margin: 0; padding: 0; }
+    #app { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .brand { font-weight: 700; font-size: 18px; }
+    .app-header { color: var(--el-text-color-primary); display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 56px; }
+    .app-main { padding: 18px; max-width: 1320px; margin: 0 auto; }
+    .section-hint { color: var(--el-text-color-secondary); font-size: 12px; margin: 6px 0 0; line-height: 1.6; }
+    .model-chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; max-height: 160px; overflow: auto; }
+    .res-box { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--el-border-color); border-radius: 8px; background: var(--el-fill-color-light); white-space: pre-wrap; word-break: break-word; min-height: 44px; }
+    .code-box { margin-top: 10px; background: #0b0d13; color: #cdd3df; border-radius: 6px; padding: 10px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; max-height: 280px; overflow: auto; white-space: pre; }
+    .log-wrap { margin-top: 10px; }
+    .events { margin-top: 8px; background: #0b0d13; color: #cdd3df; border-radius: 6px; padding: 8px 10px; height: 96px; overflow: auto; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+    .events .ln { white-space: pre-wrap; word-break: break-word; }
+    .events .ok { color: #3ecf8e; }
+    .events .err { color: #ff6b6b; }
+    .events .sys { color: #f2a65a; }
+    .events .req { color: #5b8cff; }
+    .full { width: 100%; }
+    /* 浅色默认，深色跟随 html.dark */
+    body { background: var(--el-bg-color); color: var(--el-text-color-primary); }
+    .app-header { background: linear-gradient(90deg, #409eff, #66b1ff); color: #fff; }
+    html.dark body { background: #141414; }
+    html.dark .app-header { background: linear-gradient(90deg, #1d2129, #2a2e37); color: #e5eaf3; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <el-container>
+      <el-header class="app-header">
+        <span class="brand">OCS 本地 AI 题库</span>
+        <el-tag v-if="provBadge" size="small" effect="dark">{{ provBadge }}</el-tag>
+        <el-tag v-if="upBadge" size="small" effect="dark" type="success">{{ upBadge }}</el-tag>
+        <el-tag v-if="apiBadge" size="small" effect="plain" type="info">{{ apiBadge }}</el-tag>
+        <span style="flex:1;"></span>
+        <span style="font-size:12px; opacity:.9;">主题</span>
+        <el-switch v-model="dark" inline-prompt active-text="暗" inactive-text="亮" @change="applyTheme" style="margin-left:6px;"></el-switch>
+      </el-header>
+
+      <el-main class="app-main">
+        <el-row :gutter="18">
+          <!-- 左列 -->
+          <el-col :xs="24" :sm="24" :md="12">
+            <!-- ① 模型选择 -->
+            <el-card shadow="hover" header="① 选择模型（全局生效 · 可切换）">
+              <el-select v-model="selectedModel" class="full" filterable placeholder="选择上游模型" @change="setModel">
+                <el-option label="自动（候选故障转移）" value="auto"></el-option>
+                <el-option v-for="m in models" :key="m.id" :label="m.name" :value="m.id"></el-option>
+              </el-select>
+              <el-button style="margin-top:10px;" @click="refreshModels">刷新列表</el-button>
+              <span style="margin-left:8px;">{{ selStatus }}</span>
+              <div class="section-hint">下拉展示全部模型；★ 为推荐低速率。选择写入 config.json 并立即作为全局模型用于所有答题与 OCS 请求。</div>
+              <div class="model-chips" v-if="recommended.length">
+                <el-tag v-for="m in recommended" :key="m.id" size="small" type="success" effect="light">★ {{ m.name }}</el-tag>
+              </div>
+            </el-card>
+
+            <!-- ② 测试答题 -->
+            <el-card shadow="hover" header="② 测试答题（验证当前全局模型）" style="margin-top:18px;">
+              <el-select v-model="qType" style="margin-bottom:10px;" @change="onTypeChange">
+                <el-option label="单选" value="single"></el-option>
+                <el-option label="多选" value="multiple"></el-option>
+                <el-option label="判断" value="judgement"></el-option>
+                <el-option label="填空" value="completion"></el-option>
+              </el-select>
+              <el-input v-model="qTitle" type="textarea" :rows="3" placeholder="输入题目，例如：中国的首都是哪里？"></el-input>
+              <template v-if="showOptions">
+                <div class="section-hint">选项（每行一个，多选/单选用）</div>
+                <el-input v-model="qOptions" type="textarea" :rows="4" placeholder="北京&#10;上海&#10;广州&#10;深圳" style="margin-top:6px;"></el-input>
+              </template>
+              <div style="margin-top:12px; display:flex; gap:10px;">
+                <el-button type="primary" @click="ask">发送</el-button>
+                <el-button @click="clearAsk">清空</el-button>
+              </div>
+              <div class="res-box">{{ resText }}</div>
+            </el-card>
+
+            <!-- ②-1 提示词 -->
+            <el-card shadow="hover" header="②-1 全局提示词（影响所有答题）" style="margin-top:18px;">
+              <div class="section-hint">附加在系统提示中的额外要求，对所有题型与 OCS 请求生效；留空则使用内置默认提示词。</div>
+              <el-input v-model="systemPrompt" type="textarea" :rows="3" placeholder="例如：你是网课答题助手，请优先参考常见教材与题库的权威答案。" style="margin-top:8px;"></el-input>
+              <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+                <el-button @click="savePrompt">保存提示词</el-button>
+                <el-button @click="resetPrompt">重置提示词</el-button>
+                <span>{{ promptStatus }}</span>
+              </div>
+            </el-card>
+
+            <!-- ③ OCS 接入 + token -->
+            <el-card shadow="hover" header="③ 接入 OCS 题库（配置 + token）" style="margin-top:18px;">
+              <div class="section-hint">OCS AnswererWrapper 配置，整段填进 OCS 题库即可，接口地址：<code>{{ searchUrl }}</code>。</div>
+              <div style="margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <span>当前 token：</span>
+                <code style="background:var(--el-fill-color); padding:4px 8px; border-radius:6px;">{{ tokenVal }}</code>
+                <el-button size="small" @click="copyToken">复制 token</el-button>
+                <el-button size="small" @click="resetToken">重置 token</el-button>
+              </div>
+              <div class="section-hint">token 仅能手动重置，不会自动变更；OCS 配置里的 token 会同步更新。</div>
+              <div style="margin-top:12px; display:flex; gap:10px;">
+                <el-button @click="copyCfg">复制 OCS 配置</el-button>
+                <el-button @click="reloadCfg">重新生成配置</el-button>
+              </div>
+              <div class="code-box">{{ ocsConfigText }}</div>
+              <div class="section-hint">OCS 脚本需在元信息加 <code>@connect 127.0.0.1</code>（或启用"全域名通用版本"）才能直连本服务。</div>
+            </el-card>
+          </el-col>
+
+          <!-- 右列 -->
+          <el-col :xs="24" :sm="24" :md="12">
+            <!-- ④ API 地址设置 -->
+            <el-card shadow="hover" header="④ 上游 API 地址设置">
+              <el-input v-model="apiUrl" placeholder="http://127.0.0.1:18901/v1">
+                <template #prepend>端点</template>
+              </el-input>
+              <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+                <el-button @click="saveApiUrl">保存</el-button>
+                <span>{{ apiStatus }}</span>
+              </div>
+              <el-input v-model="apiKey" placeholder="API Key（可选，留空则沿用现有）" style="margin-top:10px;">
+                <template #prepend>Key</template>
+              </el-input>
+              <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+                <el-button @click="saveApiKey">保存 Key</el-button>
+                <el-button @click="clearCache">清除缓存</el-button>
+                <span>{{ cacheStatus }}</span>
+              </div>
+              <div class="section-hint">修改会写入 config.json 的 provider.baseUrl 并重建后端连接。清除缓存会清空内存模型缓存与 OFM 本地缓存文件（catalog/availability/stats），不影响 token/配置。</div>
+            </el-card>
+
+            <!-- ⑤ 日志 -->
+            <el-card shadow="hover" header="⑤ 答题日志（服务端实时同步）" style="margin-top:18px;">
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <el-button size="small" @click="clearLog">清空记录</el-button>
+                <el-link type="primary" :href="logFileUrl" target="_blank">下载本运行日志</el-link>
+                <el-tag size="small" :type="logOk ? 'success' : 'danger'">{{ logSync }}</el-tag>
+                <span class="section-hint" style="margin:0;">每 1.5s 从服务端拉取，OCS 与网页共用同一份；每次启动生成一个独立日志文件。</span>
+              </div>
+              <div class="log-wrap">
+                <el-table :data="logs" size="small" height="360" stripe border style="width:100%">
+                  <el-table-column label="时间" width="96">
+                    <template #default="{ row }">{{ fmtTime(row.ts) }}</template>
+                  </el-table-column>
+                  <el-table-column label="题型" width="74">
+                    <template #default="{ row }">{{ typeLabel(row.type) }}</template>
+                  </el-table-column>
+                  <el-table-column label="题目" min-width="160" show-overflow-tooltip>
+                    <template #default="{ row }">{{ row.title }}</template>
+                  </el-table-column>
+                  <el-table-column label="原始选项" min-width="150" show-overflow-tooltip>
+                    <template #default="{ row }">{{ row.rawOptions || '—' }}</template>
+                  </el-table-column>
+                  <el-table-column label="模型" min-width="110" show-overflow-tooltip>
+                    <template #default="{ row }">{{ row.model || '—' }}</template>
+                  </el-table-column>
+                  <el-table-column label="模型返回" min-width="120" show-overflow-tooltip>
+                    <template #default="{ row }">{{ row.raw || '—' }}</template>
+                  </el-table-column>
+                  <el-table-column label="结果" min-width="120">
+                    <template #default="{ row }">
+                      <el-tag v-if="row.status === 'pending'" type="warning" size="small">回答中…</el-tag>
+                      <span v-else>
+                        {{ row.answer || (row.status === 'fallback' ? '未知' : '—') }}
+                        <span style="color:var(--el-text-color-secondary); font-size:12px;">{{ row.fallback ? ' · 兜底' : (row.cached ? ' · 缓存' : '') }}</span>
+                      </span>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+              <div class="section-hint">系统事件</div>
+              <div class="events">
+                <div v-for="(e, i) in events" :key="i" class="ln" :class="e.t">{{ e.text }}</div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </el-main>
+    </el-container>
+  </div>
+
+  <script src="/vendor/vue.global.js"></script>
+  <script src="/vendor/element-plus.full.min.js"></script>
+  <script src="/vendor/zh-cn.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

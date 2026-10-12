@@ -1,0 +1,21 @@
+[
+  {
+    "name": "本地AI题库(OFM/OpenAI兼容)",
+    "homepage": "http://127.0.0.1:8787/",
+    "url": "http://127.0.0.1:8787/search",
+    "method": "post",
+    "type": "GM_xmlhttpRequest",
+    "contentType": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer 6415217a418972fee0181f00e2529e9a"
+    },
+    "data": {
+      "token": "6415217a418972fee0181f00e2529e9a",
+      "title": "${title}",
+      "type": "${type}",
+      "options": "${options}"
+    },
+    "handler": "return (res)=> res && res.answer ? [res.question ?? undefined, res.answer] : [res.msg ?? \"AI未返回\", undefined]"
+  }
+]
